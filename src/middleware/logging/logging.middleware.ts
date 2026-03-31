@@ -1,0 +1,49 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
+
+@Injectable()
+export class LoggingMiddleware implements NestMiddleware {
+  private readonly looger = new Logger('HTTP');
+
+  use(req: any, res: any, next: () => void) {
+    const { method, originalUrl, ip } = req;
+    const userAgent = req.get('User-Agent') || '';
+    const startTime = Date.now();
+
+    this.looger.log(
+      `Incoming Request: ${method} ${originalUrl} - IP: ${ip} - User-Agent: ${userAgent}`,
+    );
+
+    res.on('finish', () => {
+      const { statusCode } = res;
+      const contentLength = res.get('Content-Length');
+      const duration = Date.now() - startTime;
+
+      this.looger.log(
+        `Outgoing Request: ${method} ${originalUrl} - ${statusCode} - ${contentLength || 0}b - ${duration}ms`,
+      );
+
+      if (statusCode >= 400) {
+        this.looger.error(
+          `Error Response: ${method} ${originalUrl} - ${statusCode} - ${duration}ms`,
+        );
+      }
+    });
+
+    res.on('error', (error) => {
+      this.looger.error(
+        `Response Error: ${method} ${originalUrl} - ${error.message}`,
+      );
+    });
+
+    res.on('timeout', () => {
+      this.looger.warn(
+        `Response Timeout: ${method} ${originalUrl} - ${Date.now() - startTime}ms`,
+      );
+    });
+
+    next();
+  }
+}
