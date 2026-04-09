@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-
 import {
   ExecutionContext,
   Injectable,
@@ -10,6 +8,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 
 const JwtGuard = AuthGuard('jwt');
+
+interface JwtUser {
+  userId: string;
+  email: string;
+  role: string;
+}
 
 @Injectable()
 export class JwtAuthGuard extends JwtGuard {
@@ -30,11 +34,19 @@ export class JwtAuthGuard extends JwtGuard {
     return super.canActivate(context);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  handleRequest(err: any, user: any, info: any) {
+  handleRequest<TUser = JwtUser>(
+    err: Error | null,
+    user: JwtUser | false,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _info: unknown,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    context: ExecutionContext,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    status?: unknown,
+  ): TUser {
     if (err || !user) {
       throw err || new UnauthorizedException();
     }
-    return user;
+    return user as TUser;
   }
 }

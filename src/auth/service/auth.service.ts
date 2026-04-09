@@ -4,6 +4,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
 import { serviceConfig } from 'src/config/gateway.config';
+import { RegisterDto } from '../dtos/register.dto';
+import { LoginDto } from '../dtos/login.dto';
 
 export interface UserSession {
   valid: boolean;
@@ -26,6 +28,17 @@ export interface UserResponse {
   status: string;
 }
 
+export interface AuthResponse {
+  access_token: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -33,7 +46,7 @@ export class AuthService {
     private readonly httpService: HttpService,
   ) {}
 
-  validateJwtToken(token: string): Promise<any> {
+  validateJwtToken(token: string): AuthResponse {
     try {
       return this.jwtService.verify(token);
     } catch (error) {
@@ -55,7 +68,7 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: { email: string; password: string }) {
+  async login(loginDto: LoginDto): Promise<AuthResponse> {
     try {
       const { data } = await firstValueFrom(
         this.httpService.post<UserResponse>(
@@ -64,18 +77,29 @@ export class AuthService {
           { timeout: serviceConfig.users.timeout },
         ),
       );
-      return data;
+
+      const payload = {
+        sub: data.id,
+        email: data.email,
+        role: data.role,
+      };
+
+      return {
+        access_token: this.jwtService.sign(payload),
+        user: {
+          id: data.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+        },
+      };
     } catch (error) {
       throw new UnauthorizedException('Invalid login credentials');
     }
   }
 
-  async register(registerDto: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-  }) {
+  async register(registerDto: RegisterDto): Promise<AuthResponse> {
     try {
       const { data } = await firstValueFrom(
         this.httpService.post<UserResponse>(
@@ -92,8 +116,14 @@ export class AuthService {
       };
 
       return {
-        ...data,
         access_token: this.jwtService.sign(payload),
+        user: {
+          id: data.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role,
+        },
       };
     } catch (error) {
       throw new UnauthorizedException('Registration failed');

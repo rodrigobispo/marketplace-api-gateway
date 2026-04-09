@@ -1,13 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class LoggingMiddleware implements NestMiddleware {
   private readonly looger = new Logger('HTTP');
 
-  use(req: any, res: any, next: () => void) {
+  use(req: Request, res: Response, next: () => void) {
     const { method, originalUrl, ip } = req;
     const userAgent = req.get('User-Agent') || '';
     const startTime = Date.now();
